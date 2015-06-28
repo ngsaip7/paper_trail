@@ -2,6 +2,10 @@
 
 ### Changes
 
+- If you are tracking who is responsible for changes with `whodunnit`, be aware
+  that PaperTrail no longer adds the `set_paper_trail_whodunnit` before_filter
+  for you. Please add this before_filter to your ApplicationController to
+  continue recording whodunnit. See the readme for an example.
 - If you use a Rails initializer for PaperTrail add
   `PaperTrail::Rails::Engine.eager_load!` to the beginning of it.
   See the readme for an example.

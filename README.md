@@ -530,13 +530,28 @@ PaperTrail::Version.where_object(content: "Hello", title: "Article")
 
 ## Finding Out Who Was Responsible For A Change
 
-If your `ApplicationController` has a `current_user` method, PaperTrail will
-attempt to store the value returned by `current_user.id` in the version's
+Set `PaperTrail.whodunnit=`, and that value will be stored in the version's
 `whodunnit` column.
 
-You may want PaperTrail to call a different method to find out who is
-responsible.  To do so, override the `user_for_paper_trail` method in your
-controller like this:
+```ruby
+PaperTrail.whodunnit = 'Andy Stewart'
+widget.update_attributes :name => 'Wibble'
+widget.versions.last.whodunnit              # Andy Stewart
+```
+
+If your controller has a `current_user` method, PaperTrail provides a
+`before_filter` that will assign `current_user.id` to `PaperTrail.whodunnit`.
+You can add this `before_filter` to your `ApplicationController`.
+
+```ruby
+class ApplicationController
+  before_filter :set_paper_trail_whodunnit
+end
+```
+
+You may want `set_paper_trail_whodunnit` to call a different method to find out
+who is responsible. To do so, override the `user_for_paper_trail` method in
+your controller like this:
 
 ```ruby
 class ApplicationController
@@ -544,14 +559,6 @@ class ApplicationController
     logged_in? ? current_member.id : 'Public user'  # or whatever
   end
 end
-```
-
-In a console session you can manually set who is responsible like this:
-
-```ruby
-PaperTrail.whodunnit = 'Andy Stewart'
-widget.update_attributes :name => 'Wibble'
-widget.versions.last.whodunnit              # Andy Stewart
 ```
 
 You can avoid having to do this manually by setting your initializer to pick up
