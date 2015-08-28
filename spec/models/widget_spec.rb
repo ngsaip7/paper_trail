@@ -261,6 +261,77 @@ describe Widget, :type => :model do
           expect(widget.updated_at).to be > time_was
         end
       end
+
+      describe '#trail_for' do
+        it { is_expected.to respond_to(:trail_for) }
+
+        describe "return value" do
+          context "when called for an attribute that is not present for the model" do
+            it "should raise an error" do
+              expect{widget.trail_for(:not_an_attribute)}.to raise_error(RuntimeError)
+            end
+          end
+
+          context "when called with an attribute of the model" do
+            context "when the value for the attribute is updated" do
+              before { widget.update_attributes(:name => 'Sam') }
+
+              it "should contain an hash with the version id of the update event" do
+                expect(widget.trail_for(:name).any? { |change| change["version_id"] == widget.versions.last.id }).to be_truthy
+              end
+
+              it "should contain the initial value before the change and the final value of the attribute after the change" do
+                initial_value = widget.name
+                final_value = "Ron"
+
+                widget.update_attributes(:name => final_value)
+
+                expect(widget.trail_for(:name).last["initial_value"]).to eq(initial_value)
+                expect(widget.trail_for(:name).last["final_value"]).to eq(final_value)
+              end
+
+              it "should contain the timestamp when the change occurred" do
+                expect(widget.trail_for(:name).last["changed_at"]).to eq(widget.versions.last.created_at)
+              end
+
+              it "should contain the user who was responsible for the change" do
+                expect(widget.trail_for(:name).last["whodunnit"]).to eq(widget.versions.last.whodunnit)
+              end
+
+              it "should return a array of hashes in descending order of occurrence" do
+                expect(widget.trail_for(:name).first["changed_at"]).to eq(widget.versions.creates.first.created_at)
+                expect(widget.trail_for(:name).last["changed_at"]).to eq(widget.versions.last.created_at)
+              end
+            end
+
+            context "when the value for some other attribute is updated" do
+              it "should not contain an hash with the version id of the update event" do
+                widget.update_attributes(:an_integer => 777)
+
+                expect(widget.trail_for(:name).any? { |change| change["version_id"] == widget.versions.last.id }).to be_falsey
+              end
+            end
+
+            context "when the value for the required attribute and another attribute is updated" do
+              it "should contain an hash with the version id of the update event" do
+                widget.update_attributes(:name => 'Harry', :an_integer => 1845)
+
+                expect(widget.trail_for(:name).any? { |change| change["version_id"] == widget.versions.last.id }).to be_truthy
+              end
+
+              it "should return an hash with the initial value and the final value of the attribute after the change" do
+                initial_value = widget.name
+                final_value = "Red"
+
+                widget.update_attributes(:name => final_value, :an_integer => 1732)
+
+                expect(widget.trail_for(:name).last["initial_value"]).to eq(initial_value)
+                expect(widget.trail_for(:name).last["final_value"]).to eq(final_value)
+              end
+            end
+          end
+        end
+      end
     end
 
     describe "Class" do

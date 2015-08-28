@@ -307,6 +307,22 @@ module PaperTrail
         save!(:validate => false)
       end
 
+      #Returns an array of hashes containing all the changes for a particular attribute in ascending order of occurrence
+      def trail_for(attr)
+        raise "There is no attribure #{attr} for #{self.class.to_s}" if !self.attributes.key?(attr.to_s)
+
+        versions.collect do |version|
+          if version.changeset && version.changeset.key?(attr)
+            changeset = version.changeset
+            changes = {}
+            changes["initial_value"] = changeset.send(:[],attr).first
+            changes["final_value"] = changeset.send(:[],attr).last
+
+            changes.merge!({"event" => version.event, "whodunnit" => version.whodunnit, "version_id" => version.id, "changed_at" => version.created_at})
+          end
+        end.compact
+      end
+
       private
 
       # Returns true if `save` will cause `record_update`
