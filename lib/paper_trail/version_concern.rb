@@ -187,6 +187,7 @@ module PaperTrail
           :mark_for_destruction => false,
           :has_one    => false,
           :has_many   => false,
+          :belongs_to => false,
           :unversioned_attributes => :nil
         )
 
@@ -250,6 +251,10 @@ module PaperTrail
 
         unless options[:has_many] == false
           reify_has_manys model, options
+        end
+
+        unless options[:belongs_to] == false
+          reify_belongs_to model, options
         end
 
         model
@@ -367,6 +372,46 @@ module PaperTrail
         partition { |assoc| assoc.options[:through] }
       reify_has_many_directly(assoc_has_many_directly, model, options)
       reify_has_many_through(assoc_has_many_through, model, options)
+    end
+
+    def reify_belongs_to(model, options = {})
+      associations = model.class.reflect_on_all_associations(:belongs_to)
+
+      associations.each do |assoc|
+        next unless assoc.klass.paper_trail_enabled_for_model?
+        collection_keys = model.send(assoc.association_foreign_key)
+
+        version_id_subquery = assoc.klass.paper_trail_version_class.
+          select("MIN(id)").
+          where("item_type = ?", assoc.class_name).
+          where("item_id IN (?)", collection_keys).
+          where("created_at >= ? OR transaction_id = ?", options[:version_at], transaction_id).
+          group("item_id").to_sql
+        versions = assoc.klass.paper_trail_version_class.where("id IN (#{version_id_subquery})").inject({}) do |acc, v|
+          acc.merge!(v.item_id => v)
+        end
+
+        collection = Array.new assoc.klass.where(assoc.klass.primary_key => collection_keys)
+
+        # Iterate each child to replace it with the previous value if there is
+        # a version after the timestamp.
+        collection.map! do |c|
+          if (version = versions.delete(c.id)).nil?
+            c
+          elsif version.event == 'create'
+            options[:mark_for_destruction] ? c.tap { |r| r.mark_for_destruction } : nil
+          else
+            version.reify(options.merge(:has_many => false, :has_one => false))
+          end
+        end
+
+        # Reify the rest of the versions and add them to the collection, these
+        # versions are for those that have been removed from the live
+        # associations.
+        collection += versions.values.map { |version| version.reify(options.merge(:has_many => false, :has_one => false)) }
+
+        model.send("#{assoc.name}=".to_sym,collection.compact.first)
+      end
     end
 
     # Restore the `model`'s has_many associations not associated through
