@@ -233,6 +233,7 @@ module PaperTrail
 
         # Set all the attributes in this version on the model.
         attrs.each do |k, v|
+          next if options[:only] && !options[:only].include?(k.to_sym)
           if model.has_attribute?(k)
             model[k.to_sym] = v
           elsif model.respond_to?("#{k}=")
