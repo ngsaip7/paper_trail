@@ -421,7 +421,7 @@ module PaperTrail
         # if the association is a has_many association again, then call reify_has_manys for each through_collection
         if !assoc.source_reflection.belongs_to? && through_collection.present?
           through_collection.each { |through_model| reify_has_manys(through_model,options) }
-          return
+          next
         end
 
         collection_keys = through_collection.map { |through_model| through_model.send(assoc.association_foreign_key)}

@@ -225,9 +225,19 @@ class SetUpTestTables < ActiveRecord::Migration
       t.integer :section_id
       t.string :name
     end
+
+    create_table :quotations, :force => true do |t|
+      t.integer :chapter_id
+    end
+
+    create_table :citations, :force => true do |t|
+      t.integer :quotation_id
+    end
   end
 
   def self.down
+    drop_table :citations
+    drop_table :quotations
     drop_table :animals
     drop_table :skippers
     drop_table :not_on_updates

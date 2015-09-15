@@ -2049,5 +2049,23 @@ class HasPaperTrailModelTransactionalTest < ActiveSupport::TestCase
         end
       end
     end
+
+    context "a chapter with one paragraph and one citation" do
+      should "reify paragraphs and citations" do
+        chapter = Chapter.create(:name => 'Chapter One')
+        section = Section.create(:name => 'Section One', :chapter => chapter)
+        paragraph = Paragraph.create(:name => 'Paragraph One', :section => section)
+        quotation = Quotation.create(:chapter => chapter)
+        citation = Citation.create(:quotation => quotation)
+        Timecop.travel 1.second.since
+        chapter.update_attributes(:name => 'Chapter One, Vers. Two')
+        assert_equal 2, chapter.versions.count
+        paragraph.destroy!
+        citation.destroy!
+        reified = chapter.versions[1].reify(:has_many => true)
+        assert_equal [paragraph], reified.sections.first.paragraphs
+        assert_equal [citation], reified.quotations.first.citations
+      end
+    end
   end
 end
