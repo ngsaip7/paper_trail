@@ -170,7 +170,7 @@ module PaperTrail
         PaperTrail.enabled_for_model?(self)
       end
 
-      def paper_trail_enabled_for_belongs_to_assiociation? association
+      def paper_trail_enabled_for_belongs_to_assiociation?(association)
         if paper_trail_options[:track_belongs_to_associations]
           paper_trail_options[:track_belongs_to_associations].
             map(&:to_sym).include? association.name

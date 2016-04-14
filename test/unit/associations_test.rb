@@ -891,4 +891,54 @@ class AssociationsTest < ActiveSupport::TestCase
       end
     end
   end
+
+  context "Tracking belongs_to associations" do
+    context "Widget and Wotsit" do
+      setup do
+        @widget = Widget.create(name: "widget_0")
+        @wotsit = @widget.create_wotsit name: "wotsit_0"
+        Timecop.travel 1.second.since
+        @version_association_size = PaperTrail::VersionAssociation.count
+      end
+
+      context "when an empty array is passed to 'track_belongs_to_associations'" do
+        setup do
+          Wotsit.instance_eval do
+            has_paper_trail track_belongs_to_associations: []
+          end
+        end
+
+        should "not track the belongs_to association" do
+          @wotsit.update_attributes(name: "wotsit_1")
+          assert_equal 0, (PaperTrail::VersionAssociation.count - @version_association_size)
+        end
+      end
+
+      context "when a association is passed to 'track_belongs_to_associations'" do
+        setup do
+          Wotsit.instance_eval do
+            has_paper_trail track_belongs_to_associations: [:widget]
+          end
+        end
+
+        should "track the belongs_to association" do
+          @wotsit.update_attributes(name: "wotsit_1")
+          assert_equal 1, (PaperTrail::VersionAssociation.count - @version_association_size)
+        end
+      end
+
+      context "when 'track_belongs_to_associations' is not passed to 'has_paper_trail'" do
+        setup do
+          Wotsit.instance_eval do
+            has_paper_trail
+          end
+        end
+
+        should "track the belongs_to association" do
+          @wotsit.update_attributes(name: "wotsit_1")
+          assert_equal 1, (PaperTrail::VersionAssociation.count - @version_association_size)
+        end
+      end
+    end
+  end
 end
